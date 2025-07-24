@@ -1,0 +1,33 @@
+WITH PARENT_TABLE AS (
+    SELECT 
+        s.show_title,
+        s.show_id,
+        s.categories_title,
+        SUM(m.watched_time) AS total_watchtime
+    FROM 
+        analyticsdatabase.pb_show_season_media_content_snapshot s 
+    LEFT JOIN 
+        analyticsdatabase.matomo_log_media m 
+        ON CAST(s.show_id AS VARCHAR) = split_part(m.media_title, '/', 1)
+		 where 
+		 [[ s.categories_title ={{category}} AND]] 
+		  1=1 AND
+		[[m.server_time between {{startingdate}} AND {{ENDDATE}} ]]
+		       
+		       
+    GROUP BY 
+        s.show_title, s.show_id, s.categories_title, split_part(m.media_title, '/', 1) 
+)
+SELECT
+    show_id,
+    show_title,
+    categories_title,
+    total_watchtime,
+    CONCAT(
+        LPAD(CAST(total_watchtime / 3600 AS VARCHAR), 2, '0'), ':',
+        LPAD(CAST((total_watchtime % 3600) / 60 AS VARCHAR), 2, '0'), ':',
+        LPAD(CAST((total_watchtime % 3600) % 60 AS VARCHAR), 2, '0')
+    ) AS formatted_watchtime
+FROM PARENT_TABLE
+ORDER BY total_watchtime DESC
+LIMIT 10;
